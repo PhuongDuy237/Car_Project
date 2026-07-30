@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include "control.h"
+#include "car_control.h"
+#include "arm_control.h"
 
 SoftwareSerial myBluetooth(2, 3); // Tx, Rx
 char command;

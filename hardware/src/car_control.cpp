@@ -1,10 +1,10 @@
-# include "control.h"
+# include "car_control.h"
 
-// Left pair
+// Right pair
 const int inRight1 = 4;
 const int inRight2 = 5;
 
-// Right pair
+// Left pair
 const int inLeft1 = 6;
 const int inLeft2 = 7;
 

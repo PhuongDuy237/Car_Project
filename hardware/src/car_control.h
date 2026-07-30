@@ -1,5 +1,5 @@
-#ifndef CONTROL_H
-#define CONTROL_H
+#ifndef CAR_CONTROL_H
+#define CAR_CONTROL_H
 
 #include <Arduino.h>
 

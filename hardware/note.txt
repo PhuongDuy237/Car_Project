@@ -1,0 +1,6 @@
+======== 1. Góc servo ========
+- base_degree = (0,180)
+- shoulder_degree = (60,180)
+- elbow_degree = (40,180)
+- gripper_degree = (58,109)
+==============================
