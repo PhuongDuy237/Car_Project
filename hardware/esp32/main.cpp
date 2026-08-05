@@ -32,6 +32,12 @@ void setup() {
 }
 
 void loop() {
+    int distance = car->getDistance();
+    if (distance <= 15 && command == 'F'){
+        car->stop();
+        command = 'S';
+    }
+
     WiFiClient client = server.available();
 
     if(client){
@@ -48,11 +54,14 @@ void loop() {
                 case '4': speedLv = 4; break;
 
                 // Direction control
-                case 'F': car->moveForward(speedLv); break;
+                case 'F': 
+                    if (distance <= 10)     car->stop();
+                    else    car->moveForward(speedLv); break;
                 case 'B': car->moveBackward(speedLv); break;
                 case 'L': car->turnLeft(speedLv); break;
                 case 'R': car->turnRight(speedLv);  break;
                 case 'S': car->stop(); break;
+                case '0': car->stop(); break;
 
                 // Horn control
                 case 'V': car->hornOn(hornFreq); break;
