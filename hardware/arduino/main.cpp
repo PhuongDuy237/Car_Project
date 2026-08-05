@@ -5,13 +5,15 @@
 
 SoftwareSerial myBluetooth(2, 3); // Tx, Rx
 char command;
+CarController* car = new CarController();
+
 
 void setup() {
 Serial.begin(9600);
 myBluetooth.begin(9600);
 
-setupMotors();
-setupHorn();
+car->setupMotors();
+car->setupHorn();
 }
 
 void loop() {
@@ -20,13 +22,13 @@ void loop() {
     Serial.println("Command recieved: " + String(command));
 
     switch(command){
-        case 'F': moveForward(); break;
-        case 'B': moveBackward(); break;
-        case 'L': turnLeft(); break;
-        case 'R': turnRight();  break;
-        case 'S': stop(); break;
-        case 'V': hornOn(); break;
-        case 'v': hornOff(); break;
+        case 'F': car->moveForward(); break;
+        case 'B': car->moveBackward(); break;
+        case 'L': car->turnLeft(); break;
+        case 'R': car->turnRight();  break;
+        case 'S': car->stop(); break;
+        case 'V': car->hornOn(); break;
+        case 'v': car->hornOff(); break;
         }
     }
 }

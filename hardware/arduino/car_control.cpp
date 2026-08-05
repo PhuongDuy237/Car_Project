@@ -1,54 +1,51 @@
 # include "car_control.h"
 
-// Right pair
-const int inRight1 = 4;
-const int inRight2 = 5;
-
-// Left pair
-const int inLeft1 = 6;
-const int inLeft2 = 7;
-
-// Horn
-const int hornGnd = 8;
-const int hornVcc = 9;
 const int hornFreq = 2600;
 
-void stop() {
+CarController::CarController() :
+inRight1(4), inRight2(5), inLeft1(6), inLeft2(7), hornVcc(9), hornGnd(8)
+{}
+
+CarController::CarController(const int inRight1, const int inRight2, const int inLeft1, const int inLeft2, const int hornVcc, const int hornGnd) :
+inRight1(inRight1), inRight2(inRight2), inLeft1(inLeft1), inLeft2(inLeft2), hornVcc(hornVcc), hornGnd(hornGnd) 
+{}
+
+void CarController::stop() {
   digitalWrite(inLeft1, LOW);
   digitalWrite(inLeft2, LOW);
   digitalWrite(inRight1, LOW);
   digitalWrite(inRight2, LOW);
 }
 
-void moveForward() {
+void CarController::moveForward() {
   digitalWrite(inLeft1, HIGH);
   digitalWrite(inLeft2, LOW);
   digitalWrite(inRight1, HIGH);
   digitalWrite(inRight2, LOW);
 }
 
-void moveBackward() {
+void CarController::moveBackward() {
   digitalWrite(inLeft1, LOW);
   digitalWrite(inLeft2, HIGH);
   digitalWrite(inRight1, LOW);
   digitalWrite(inRight2, HIGH);
 }
 
-void turnLeft() {
+void CarController::turnLeft() {
   digitalWrite(inLeft1, HIGH);
   digitalWrite(inLeft2, LOW);
   digitalWrite(inRight1, LOW);
   digitalWrite(inRight2, HIGH);
 }
 
-void turnRight() {
+void CarController::turnRight() {
   digitalWrite(inLeft1, LOW);
   digitalWrite(inLeft2, HIGH);
   digitalWrite(inRight1, HIGH);
   digitalWrite(inRight2, LOW);
 }
 
-void setupHorn() {
+void CarController::setupHorn() {
   pinMode(hornVcc, OUTPUT);
   pinMode(hornGnd, OUTPUT);
 
@@ -56,15 +53,15 @@ void setupHorn() {
   noTone(hornVcc);
 }
 
-void hornOn() {
+void CarController::hornOn() {
   tone(hornVcc, hornFreq);
 }
 
-void hornOff() {
+void CarController::hornOff() {
   noTone(hornVcc);
 }
 
-void setupMotors() {
+void CarController::setupMotors() {
   pinMode(inLeft1, OUTPUT);
   pinMode(inLeft2, OUTPUT);
   pinMode(inRight1, OUTPUT);
