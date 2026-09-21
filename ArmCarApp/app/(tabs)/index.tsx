@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Alert, Keyboard } from 'react-native';
+
+// Gửi lại lệnh mỗi khoảng này trong lúc giữ nút, để bù các gói bị rớt trên Wi-Fi.
+// Phải nhỏ hơn nhiều so với ARM_COMMAND_TIMEOUT_MS bên firmware (400ms) để watchdog không kích hoạt khi vẫn đang giữ.
+const HOLD_REPEAT_MS = 150;
 
 // ================= CẤU HÌNH GỬI LỆNH WI-FI =================
 const sendCommandToESP = async (ip: string, command: string) => {
@@ -25,19 +29,32 @@ interface ControlButtonProps {
   borderRadius?: number;
 }
 
-const ControlButton: React.FC<ControlButtonProps> = ({ 
-  label, command, releaseCommand = '0', ip, isConnected, color = '#444', width = 70, height = 70, borderRadius = 15 
+const ControlButton: React.FC<ControlButtonProps> = ({
+  label, command, releaseCommand = '0', ip, isConnected, color = '#444', width = 70, height = 70, borderRadius = 15
 }) => {
+  const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRepeating = () => {
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
+    }
+  };
 
   const handlePressIn = () => {
     if (!isConnected) return;
     sendCommandToESP(ip, command);
+    stopRepeating();
+    repeatRef.current = setInterval(() => sendCommandToESP(ip, command), HOLD_REPEAT_MS);
   };
 
   const handlePressOut = () => {
+    stopRepeating();
     if (!isConnected) return;
     sendCommandToESP(ip, releaseCommand);
   };
+
+  useEffect(() => stopRepeating, []);
 
   return (
     <Pressable
@@ -116,12 +133,12 @@ export default function App() {
       <View style={styles.sidePanel}>
         <View style={styles.topControlGroup}>
             <View style={styles.row}>
-                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Cùi Lên (T)" command="T" width={60} height={60} />
-                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="GẮP (J)" command="J" color="#b30000" width={60} height={60} />
+                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Cùi Ra (T)" command="T" releaseCommand="s" width={60} height={60} />
+                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="GẮP (J)" command="J" releaseCommand="s" color="#b30000" width={60} height={60} />
             </View>
             <View style={styles.row}>
-                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Cùi Xuống (G)" command="G" width={60} height={60} />
-                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="NHẢ (K)" command="K" color="#004080" width={60} height={60} />
+                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Cùi Vào (G)" command="G" releaseCommand="s" width={60} height={60} />
+                <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="NHẢ (K)" command="K" releaseCommand="s" color="#004080" width={60} height={60} />
             </View>
         </View>
 
@@ -206,13 +223,13 @@ export default function App() {
             </View>
 
         {/* Cụm Vai & Đế */}
-        <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Vai Lên (W)" command="W" />
+        <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Vai Lên (W)" command="W" releaseCommand="s" />
         <View style={styles.row}>
-          <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Đế Trái (A)" command="A" />
+          <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Đế Trái (A)" command="A" releaseCommand="s" />
           <View style={styles.spacer} />
-          <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Đế Phải (D)" command="D" />
+          <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Đế Phải (D)" command="D" releaseCommand="s" />
         </View>
-        <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Vai Xuống (X)" command="X" /> 
+        <ControlButton ip={ipAddress} isConnected={isWifiConnected} label="Vai Xuống (X)" command="X" releaseCommand="s" />
       </View>
 
     </View>

@@ -1,19 +1,22 @@
 # include "car_control.h"
 
 CarController::CarController() :
-    rightMotors{13, 14, 22},
-    leftMotors{26, 27, 23},
+    rightMotors{27, 26, 25},
+    leftMotors{14, 12, 13},
     sonar{16, 35},
     hornPin(32),
     speed{0, 70, 135, 185, 255}
 {}
 
-CarController::CarController(int inRight1, int inRight2, int enA, int inLeft1, int inLeft2, int enB, int hornPin, int trigPin, int echoPin) : 
+CarController::CarController(
+  int inRight1, int inRight2, int enA, int inLeft1, int inLeft2, int enB,
+  int hornPin, int trigPin, int echoPin
+) :
     rightMotors{inRight1, inRight2, enA},
     leftMotors{inLeft1, inLeft2, enB},
     sonar{trigPin, echoPin},
     hornPin(hornPin),
-    speed{0, 70, 135, 185, 255} 
+    speed{0, 70, 135, 185, 255}
 {}
 
 void CarController::setupCar() {
@@ -41,45 +44,52 @@ void CarController::stop() {
   digitalWrite(leftMotors.in2, LOW);
   digitalWrite(rightMotors.in1, LOW);
   digitalWrite(rightMotors.in2, LOW);
+
+  analogWrite(leftMotors.en, 0);
+  analogWrite(rightMotors.en, 0);
 }
 
 void CarController::moveForward(int speedLv) {
   digitalWrite(leftMotors.in1, HIGH);
   digitalWrite(leftMotors.in2, LOW);
-  analogWrite(leftMotors.en, speed[speedLv]);
-  
+
   digitalWrite(rightMotors.in1, HIGH);
   digitalWrite(rightMotors.in2, LOW);
+
+  analogWrite(leftMotors.en, speed[speedLv]);
   analogWrite(rightMotors.en, speed[speedLv]);
 }
 
 void CarController::moveBackward(int speedLv) {
   digitalWrite(leftMotors.in1, LOW);
   digitalWrite(leftMotors.in2, HIGH);
-  analogWrite(leftMotors.en, speed[speedLv]);
 
   digitalWrite(rightMotors.in1, LOW);
   digitalWrite(rightMotors.in2, HIGH);
+
+  analogWrite(leftMotors.en, speed[speedLv]);
   analogWrite(rightMotors.en, speed[speedLv]);
 }
 
 void CarController::turnLeft(int speedLv) {
   digitalWrite(leftMotors.in1, HIGH);
   digitalWrite(leftMotors.in2, LOW);
-  analogWrite(leftMotors.en, speed[speedLv]);
 
   digitalWrite(rightMotors.in1, LOW);
   digitalWrite(rightMotors.in2, HIGH);
+
+  analogWrite(leftMotors.en, speed[speedLv]);
   analogWrite(rightMotors.en, speed[speedLv]);
 }
 
 void CarController::turnRight(int speedLv) {
   digitalWrite(leftMotors.in1, LOW);
   digitalWrite(leftMotors.in2, HIGH);
-  analogWrite(leftMotors.en, speed[speedLv]);
 
   digitalWrite(rightMotors.in1, HIGH);
   digitalWrite(rightMotors.in2, LOW);
+
+  analogWrite(leftMotors.en, speed[speedLv]);
   analogWrite(rightMotors.en, speed[speedLv]);
 }
 
@@ -91,7 +101,7 @@ void CarController::hornOff() {
   noTone(hornPin);
 }
 
-int CarController::getDistance(){
+int CarController::getDistance() {
   digitalWrite(sonar.trig, LOW);
   delayMicroseconds(2);
   digitalWrite(sonar.trig, HIGH);

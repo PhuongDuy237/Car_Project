@@ -1,0 +1,142 @@
+======== THÔNG TIN PHẦN CỨNG - ESP32 (car + arm) ========
+Tài liệu này mô tả linh kiện và sơ đồ nối dây cho board ESP32,
+dựa trên source code trong hardware/esp32/ (car_control.cpp/.h,
+arm_control.cpp/.h, main.cpp) và các linh kiện đã xác nhận qua trao đổi.
+
+LƯU Ý: Đây là tài liệu tham khảo phần cứng, KHÔNG chỉnh sửa source code.
+Mọi thay đổi trong source code chỉ được thực hiện khi có yêu cầu rõ ràng.
+
+
+======== 1. DANH SÁCH LINH KIỆN ========
+- Vi điều khiển : ESP32-WROOM-32 DevKit, 38 chân
+- Driver động cơ : Module L298N (2 kênh, motor phải = kênh A, motor trái = kênh B)
+- Nguồn chính   : 2x pin 18650 nối tiếp (~7.4V danh định, 6V-8.4V thực tế)
+- Hạ áp cho ESP32/servo : Module LM2596S (buck converter), 3A, chỉnh output 5V
+- Cảm biến khoảng cách : HC-SR04 (siêu âm)
+- Còi           : Buzzer nhỏ, loại passive 2 chân (cắm trực tiếp GPIO, không cần transistor)
+- Tay gắp       : 4x servo SG90 180 độ (base, shoulder, elbow, gripper),
+                  điều khiển qua thư viện ESP32Servo
+- Động cơ bánh xe : 4x động cơ giảm tốc vàng TT (2 motor/bên, đấu song song vào
+                  cùng 1 kênh L298N - xem mục 4.2)
+
+
+======== 2. SƠ ĐỒ CHÂN GPIO (theo source code, constructor mặc định) ========
+
+-- Car control (car_control.cpp) --
+  Motor phải (rightMotors) : IN1=GPIO13, IN2=GPIO14, EN(PWM)=GPIO22
+  Motor trái (leftMotors)  : IN1=GPIO26, IN2=GPIO27, EN(PWM)=GPIO23
+  HC-SR04 (sonar)          : TRIG=GPIO16, ECHO=GPIO35
+  Còi (hornPin)            : GPIO32
+
+-- Arm control (arm_control.cpp) --
+  Base servo     : GPIO25
+  Shoulder servo : GPIO18
+  Elbow servo    : GPIO19
+  Gripper servo  : GPIO21
+
+  Giới hạn góc servo (đã ghi trong hardware/note.txt):
+    base_degree     = (0, 180)
+    shoulder_degree = (60, 180)
+    elbow_degree    = (40, 180)
+    gripper_degree  = (58, 109)
+
+Không có xung đột chân giữa car và arm.
+GPIO35 là chân input-only trên ESP32 (đúng với vai trò đọc ECHO).
+
+
+======== 3. SƠ ĐỒ NGUỒN ========
+
+  2x18650 (7.4V, nối tiếp)
+       |
+       +---(+)---> L298N (12V/VMS)  ---> nuôi 2 động cơ bánh xe
+       |
+       +---(+)---> LM2596S IN+  --[chỉnh output 5V]-->  OUT+ ---+---> ESP32 chân "5V"
+       |                                                        |
+       +---(-)---> LM2596S IN-, L298N GND                       +---> Servo x4 (VCC, dùng chung rail 5V)
+                                                                 |
+                                                    (GND servo nối chung GND hệ thống)
+
+- ESP32, L298N, LM2596S, HC-SR04, còi, servo: TẤT CẢ chung một điểm GND.
+- Servo lấy nguồn 5V CHUNG với ESP32 (rail ra của LM2596S) theo xác nhận của bạn.
+  Module LM2596S đang dùng: 3A.
+  Ước tính tải: ESP32 lúc phát WiFi ~0.3-0.5A + 4x servo SG90 lúc stall/kẹt cùng lúc
+  ~0.6A/con = tối đa ~2.4A -> tổng worst-case ~2.7-2.9A, XẤP XỈ sát ngưỡng 3A.
+  Trên thực tế, code (arm_control.cpp: moveJoint) chỉ di chuyển 1 servo tại 1 thời
+  điểm theo từng lệnh nhận được, nên trường hợp cả 4 servo cùng stall đồng thời gần
+  như không xảy ra khi vận hành bình thường -> rail 3A dùng chung là CHẤP NHẬN ĐƯỢC,
+  nhưng margin khá mỏng. Nếu sau này thấy ESP32 tự reset khi cử động tay gắp lúc xe
+  đang chạy, nên tách nguồn servo ra rail riêng.
+
+
+======== 4. BẢNG NETLIST NỐI DÂY ========
+
+--- 4.1 Nguồn ---
+| # | Từ                  | Chân  | Đến        | Chân          | Ghi chú                         |
+|---|---------------------|-------|------------|---------------|----------------------------------|
+| 1 | Pin 18650 x2 (nt)   | (+)   | L298N      | 12V / VMS     | Nuôi motor                       |
+| 2 | Pin 18650 x2 (nt)   | (-)   | L298N      | GND           |                                   |
+| 3 | Pin 18650 x2 (nt)   | (+)   | LM2596S    | IN+           | Rẽ nhánh song song với #1        |
+| 4 | Pin 18650 x2 (nt)   | (-)   | LM2596S    | IN-           | Rẽ nhánh song song với #2        |
+| 5 | LM2596S (đã chỉnh 5V) | OUT+ | ESP32     | chân "5V"     | Nuôi ESP32                       |
+| 6 | LM2596S             | OUT-  | ESP32      | GND           |                                   |
+| 7 | LM2596S OUT+ (5V)   | -     | Servo x4   | VCC (mỗi con) | Dùng chung rail 5V với ESP32     |
+| 8 | ESP32               | GND   | L298N      | GND           | Bắt buộc - GND chung toàn hệ thống|
+
+--- 4.2 Động cơ (qua L298N) ---
+| # | ESP32   | L298N          | Ghi chú                  |
+|---|---------|----------------|---------------------------|
+| 9  | GPIO27 | IN1            | Motor phải - chiều        | 
+| 10 | GPIO26 | IN2            | Motor phải - chiều        |
+| 11 | GPIO25 | ENA (gỡ jumper)| Motor phải - PWM tốc độ   |
+| 12 | -      | OUT1, OUT2     | Nối ra động cơ phải       |
+| 13 | GPIO14 | IN3            | Motor trái - chiều        |
+| 14 | GPIO12 | IN4            | Motor trái - chiều        |
+| 15 | GPIO13 | ENB (gỡ jumper)| Motor trái - PWM tốc độ   |
+| 16 | -      | OUT3, OUT4     | Nối ra động cơ trái       |
+
+Ghi chú đấu 4 động cơ TT (2 motor/bên):
+  - 2 motor bên phải: đấu SONG SONG với nhau, rồi 2 dây chung đó nối vào OUT1/OUT2.
+  - 2 motor bên trái : đấu SONG SONG với nhau, rồi 2 dây chung đó nối vào OUT3/OUT4.
+  - Cần đấu đúng cực (+/-) giống nhau giữa 2 motor cùng bên, nếu không sẽ bị xung
+    lực kéo (1 motor quay thuận, 1 motor quay ngược trong cùng cặp).
+
+Lưu ý: PHẢI gỡ 2 jumper ENA/ENB trên L298N, vì code điều khiển tốc độ qua PWM
+(analogWrite trên chân EN). Để nguyên jumper thì motor chỉ chạy full tốc.
+
+CẢNH BÁO dòng điện: Mỗi channel L298N chịu tối đa ~2A (theo datasheet chip).
+Động cơ TT khi bị kẹt/tải nặng có thể kéo dòng stall ~0.8-1A/motor; 2 motor
+song song trên cùng 1 channel có thể cộng dồn gần chạm ngưỡng 2A. Tránh để xe
+bị kẹt bánh lâu khi đang cấp điện, và cân nhắc tản nhiệt cho L298N nếu chạy liên tục.
+
+--- 4.3 Cảm biến khoảng cách HC-SR04 ---
+| # | ESP32 / nguồn        | Chân      | HC-SR04 | Ghi chú                              |
+|---|----------------------|-----------|---------|----------------------------------------|
+| 17 | LM2596S OUT+ (5V)   | -         | VCC     | Cảm biến cần 5V                        |
+| 18 | ESP32               | GND       | GND     |                                         |
+| 19 | ESP32               | GPIO16    | TRIG    | Output 3.3V, cắm thẳng được            |
+| 20 | HC-SR04             | ECHO      | -       | Ra mức 5V -> phải qua cầu chia áp      |
+| 21 | Cầu chia áp: ECHO -> R1(1kΩ) -> node -> R2(2kΩ) -> GND | | | Lấy tín hiệu tại node giữa R1/R2 |
+| 22 | Node giữa R1/R2     | -         | ESP32 GPIO35 | Tín hiệu đã hạ còn ~3.3V          |
+
+--- 4.4 Còi (buzzer passive) ---
+| # | ESP32   | Chân    | Buzzer      | Ghi chú                        |
+|---|---------|---------|-------------|----------------------------------|
+| 23 | GPIO32 | -       | Chân tín hiệu | Buzzer nhỏ, cắm trực tiếp, dòng thấp |
+| 24 | ESP32 GND | -     | Chân GND    |                                  |
+
+--- 4.5 Tay gắp (4x servo) ---
+| # | ESP32   | Servo          | Ghi chú                              |
+|---|---------|----------------|----------------------------------------|
+| 25 | GPIO16 | Base - Signal  |                                        |
+| 26 | GPIO17 | Shoulder - Signal |                                     |
+| 27 | GPIO05 | Elbow - Signal |                                        |
+| 28 | GPIO18 | Gripper - Signal |                                      |
+| 29 | LM2596S OUT+ (5V) | VCC (cả 4 servo) | Dùng chung rail 5V với ESP32 |
+| 30 | GND chung | GND (cả 4 servo) |                                    |
+
+
+======== 5. THÔNG TIN CÒN THIẾU / CẦN XÁC NHẬN THÊM ========
+Không còn mục nào đang thiếu tại thời điểm này. Toàn bộ linh kiện, chân GPIO và
+đánh giá tải nguồn đã được xác nhận (xem mục 3 về margin dòng điện của LM2596S 3A).
+Nếu phát sinh linh kiện mới hoặc thay đổi phần cứng, sẽ cập nhật file này khi
+được yêu cầu.

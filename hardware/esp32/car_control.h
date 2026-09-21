@@ -24,7 +24,9 @@ class CarController {
 
     public:
     CarController();
-    CarController(int inRight1, int inRight2, int enA, int inLeft1, int inLeft2, int enB, int hornPin, int trigPin, int echoPin);
+    CarController(
+        int inRight1, int inRight2, int enA, int inLeft1, int inLeft2, int enB,
+        int hornPin, int trigPin, int echoPin);
     void setupCar();
     void moveForward(int speedLv);
     void moveBackward(int speedLv);
